@@ -132,3 +132,4 @@ dmypy.json
 .ruff_cache/
 .vscode/
 /.env.docker
+.DS_Store
