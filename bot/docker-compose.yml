@@ -1,0 +1,47 @@
+version: '1.0'
+
+services:
+  app:
+    container_name: library-bot
+    image: aiogram-library-bot
+    env_file:
+      - .env.docker
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/src
+    depends_on:
+      - app_db
+
+  app_db:
+    container_name: library-bot-postgresql
+    hostname: postgres
+    image: library/postgres:14.1
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=app
+    volumes:
+      - app_pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  app_redis:
+    image: redis:6.2-alpine
+    hostname: redis
+    container_name: library-bot-redis
+    command:
+      - 'redis-server'
+      - '--requirepass myStrongPassword'
+    ports:
+      - "6379:6379"
+
+volumes:
+  app_pg_data:
+    driver: "local"
+
+networks:
+  default:
+    external: true
+    name: app_main

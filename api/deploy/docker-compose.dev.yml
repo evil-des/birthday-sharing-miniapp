@@ -1,0 +1,27 @@
+version: '3.9'
+
+services:
+  api:
+    env_file:
+      - .env
+    ports:
+      # Exposes application port.
+    - "8000:8000"
+    build:
+      target: dev
+    volumes:
+      # Adds current directory as volume.
+    - .:/app/src/
+    environment:
+      # Enables autoreload.
+      API_RELOAD: "True"
+#  worker:
+#    env_file:
+#      - .env
+  db:
+    ports:
+    - "5432:5432"
+  redis:
+    ports:
+      # Exposes application port.
+      - "6379:6379"

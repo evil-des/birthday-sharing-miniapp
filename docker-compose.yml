@@ -1,0 +1,97 @@
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: ./api/
+      dockerfile: ./deploy/Dockerfile
+      target: prod
+    image: birthday-sharing-api:${API_VERSION:-latest}
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      API_DB_HOST: api-db
+      API_DB_PORT: 5432
+      API_DB_USER: api
+      API_DB_PASS: api
+      API_DB_BASE: api
+      API_REDIS_HOST: api-redis
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+
+  client:
+    build: ./web_app/
+    ports:
+      - "3000:3000"
+
+  bot:
+    # image: telegram-bot
+    env_file:
+      - .env
+    build:
+      context: ./bot/
+    volumes:
+      - ./bot/:/src
+    depends_on:
+      - api
+    environment:
+      BOT_API_URL: htpp://api:8000/api
+      REDIS_HOST: api-redis
+
+  db:
+    image: postgres:13.8-bullseye
+    hostname: "api-db"
+    environment:
+      POSTGRES_PASSWORD: "api"
+      POSTGRES_USER: "api"
+      POSTGRES_DB: "api"
+    volumes:
+    - signals-db-data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: pg_isready -U api
+      interval: 2s
+      timeout: 3s
+      retries: 40
+
+  migrator:
+    image: birthday-sharing-api:${API_VERSION:-latest}
+    restart: "no"
+    command: alembic upgrade head
+    environment:
+      API_DB_HOST: api-db
+      # API_DB_PORT: 5432
+      API_DB_USER: api
+      API_DB_PASS: api
+      API_DB_BASE: api
+    depends_on:
+      db:
+        condition: service_healthy
+
+  redis:
+    image: bitnami/redis:6.2.5
+    hostname: "api-redis"
+    restart: always
+    environment:
+      ALLOW_EMPTY_PASSWORD: "yes"
+    healthcheck:
+      test: redis-cli ping
+      interval: 1s
+      timeout: 3s
+      retries: 50
+
+
+
+volumes:
+  birthday-sharing-db-data:
+    name: birthday-sharing-db-data
